@@ -13,6 +13,24 @@ export const getAll = async (req,res) => {
     }
 };
 
+export const getLastTags = async (req, res) => {
+	try {
+		const posts = await PostModel.find().limit(5).exec();
+
+    const tags = post
+			.map((obj) => obj.tags)
+			.flat()
+			.slice(0, 5)
+
+		res.json(posts)
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'не удалось получить статьи',
+		})
+	}
+}
+
 export const getOne = async (req,res) => {
     try {
         const postId = req.params.id;
@@ -66,6 +84,7 @@ export const create = async (req,res) => {
             title: req.body.title,
             text: req.body.text,
             imageUrl: req.body.imageUrl,
+            tags: req.body.tags.split(','),
             user: req.userId,
         });
         
@@ -84,15 +103,18 @@ export const update = async (req,res) => {
     try {
         const postId = req.params.id;
 
-        await PostModel.updateOne({
-            _id:postId,
-        }, {
-            title: req.body.title,
-            text: req.body.text,
-            imageUrl: req.body.imageUrl,
-            user: req.userId,
-        },
-        );
+        await PostModel.updateOne(
+					{
+						_id: postId,
+					},
+					{
+						title: req.body.title,
+						text: req.body.text,
+						imageUrl: req.body.imageUrl,
+						tags: req.body.tags.split(','),
+						user: req.userId,
+					}
+				)
 
         res.json({
             success: true,
@@ -131,7 +153,7 @@ export const getPost = (postId,res) => {
         });
       }
 
-      res.json(doc);
+      res.json(doc)
     },
-  )
+  ).populate('user') 
 };
