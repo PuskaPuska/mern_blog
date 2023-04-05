@@ -1,103 +1,166 @@
 import CommentModel from '../models/Comment.js'
+import PostModel from '../models/Post.js'
 
-export const getAll = async (req,res) => {
-    try {
-        const comments = await CommentModel.find().populate('post').exec();
+export const getPostComments = (req, res) => {
+	try {
+		const { postId } = req.params
+		CommentModel.find(
+			{
+				post: postId,
+			},
+			(err, doc) => {
+				if (err) {
+					console.log(err)
+					return res.status(500).json({
+						message: 'Не удалось вернуть комментарии.',
+					})
+				}
 
-        res.json(comments);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: 'не удалось получить комментарии',
-        });
-    }
-};
+				if (!doc) {
+					return res.status(404).json({
+						message: 'Статья не найдена.',
+					})
+				}
+				res.json(doc)
+			}
+		)
+			.populate('user')
+			.populate('post')
+			.sort('createdAt')
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось получить комментарии.',
+		})
+	}
+}
 
-export const getOne = async (req,res) => {
-    try {
-        const commentId = req.params.id;
-    
-        CommentModel.findOneAndUpdate(
-          {
-            _id: commentId,
-          },
-          {
-            returnDocument: 'after',
-          },
-          (err, doc) => {
-            if (err) {
-              console.log(err);
-              return res.status(500).json({
-                message: 'Не удалось вернуть комментарий',
-              });
-            }
-    
-            if (!doc) {
-              return res.status(404).json({
-                message: 'Комментарий не найден',
-              });
-            }
-    
-            res.json(doc);
-          },
-        ).populate('post');
-      } catch (err) {
-        console.log(err);
-        res.status(500).json({
-          message: 'Не удалось получить комментарий',
-        });
-      }
-};
+export const getLastComments = async (req, res) => {
+	try {
+		const comments = await CommentModel.find()
+			.populate('user')
+			.sort('createdAt')
+			.limit(3)
+			.exec()
 
-export const remove = async (req,res) => {
-    try {
-        const commentId = req.params.id;
-    
-        CommentModel.findOneAndDelete(
-          {
-            _id: commentId,
-          },(err, doc) => {
-            if (err) {
-              console.log(err);
-              return res.status(500).json({
-                message: 'Не удалось удалить комментарий',
-              });
-            }
-    
-            if (!doc) {
-              return res.status(404).json({
-                message: 'Комментарий не найден',
-              });
-            }
-    
-            res.json({
-                success: true,
-            });
-          },
-        );
-      } catch (err) {
-        console.log(err);
-        res.status(500).json({
-          message: 'Не удалось получить комментарий',
-        });
-      }
-};
- 
-export const create = async (req,res) => {
-    try {
-        const doc = new CommentModel({
-            post: req.body.post,
-            text: req.body.text,
-            user: req.userId,
-        });
-        
-        const comment = await doc.save();
+		res.json(comments)
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось получить комментарии.',
+		})
+	}
+}
 
-        res.json(comment);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: 'не удалось создать комментарий',
-        });
-    }
-};
+export const create = async (req, res) => {
+	try {
+		const doc = new CommentModel({
+			text: req.body.text,
+			user: req.userId,
+			post: req.params.postId,
+		})
+
+		const comment = await doc.save()
+
+		const { postId } = req.params
+
+		PostModel.updateOne(
+			{ _id: postId },
+			{ $push: { commentsCount: comment._id } }
+		).exec()
+
+		CommentModel.find(
+			{
+				post: postId,
+			},
+			(err, doc) => {
+				if (err) {
+					console.log(err)
+					return res.status(500).json({
+						message: 'Не удалось вернуть комментарии.',
+					})
+				}
+
+				if (!doc) {
+					return res.status(404).json({
+						message: 'Статья не найдена.',
+					})
+				}
+				res.json(doc)
+			}
+		)
+			.populate('user')
+			.populate('post')
+			.sort('createdAt')
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось добавить комментарий.',
+		})
+	}
+}
+
+export const update = async (req, res) => {
+	try {
+		const { commentId } = req.params
+
+		await CommentModel.findOneAndUpdate(commentId, {
+			$set: { ['text']: req.body.text },
+		})
+
+		res.json({
+			success: true,
+		})
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось отредактировать комментарий.',
+		})
+	}
+}
+
+export const remove = async (req, res) => {
+	try {
+		const { commentId } = req.params
+
+		CommentModel.findByIdAndDelete(commentId, async (err, doc) => {
+			if (err) {
+				console.log(err)
+				return res.status(500).json({
+					message: 'Не удалось удалить комментарий.',
+				})
+			}
+			if (!doc) {
+				console.log(err)
+				return res.status(404).json({
+					message: 'Комментарий не найден.',
+				})
+			}
+
+			const postId = doc.post
+
+			await PostModel.findOneAndUpdate(
+				{ _id: postId },
+				{ $pullAll: { commentsCount: [commentId] } },
+				{ new: true },
+				(err, _) => {
+					if (err) {
+						console.log(err)
+						return res.status(500).json({
+							message: 'Не удалось удалить комментарий.',
+						})
+					}
+				}
+			).clone()
+
+			res.json({
+				success: true,
+			})
+		})
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось получить комментарии.',
+		})
+	}
+}

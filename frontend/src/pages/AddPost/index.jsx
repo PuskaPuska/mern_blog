@@ -1,110 +1,118 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { selectIsAuth } from '../../redux/slices/auth';
-import { useNavigate ,Navigate, useParams} from 'react-router-dom';
-import TextField from '@mui/material/TextField';
-import Paper from '@mui/material/Paper';
-import Button from '@mui/material/Button';
-import SimpleMDE from 'react-simplemde-editor';
+import React, { useEffect } from 'react'
+import TextField from '@mui/material/TextField'
+import Paper from '@mui/material/Paper'
+import Button from '@mui/material/Button'
+import SimpleMDE from 'react-simplemde-editor'
 
-import 'easymde/dist/easymde.min.css';
-import styles from './AddPost.module.scss';
-import axios from 'axios';
+import 'easymde/dist/easymde.min.css'
+import styles from './AddPost.module.scss'
+import { useSelector } from 'react-redux'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { isAuth } from '../../store/slices/authSlice'
+import { useRef } from 'react'
+import axios from '../../axios/axios'
 
 export const AddPost = () => {
-	const { id } = useParams();
-  const navigate = useNavigate();
-  const isAuth = useSelector(selectIsAuth)
-  const [isLoading, setLoading] = React.useState('false')
-  const [text, setText] = React.useState('');
-  const [title, setTitle] = React.useState('');
-  const [tags, setTags] = React.useState('');
-  const [imageUrl, setImageUrl] = React.useState('')
-  const inputFileRef = React.useRef(null);
+	const navigate = useNavigate()
+	const { id } = useParams()
+	const isUserAuth = useSelector(isAuth)
+	const inputFileRef = useRef(null)
+	// eslint-disable-next-line
+	const [loading, setLoading] = React.useState(false)
+	const [imageUrl, setImageUrl] = React.useState('')
+	const [text, setText] = React.useState('')
+	const [title, setTitle] = React.useState('')
+	const [tags, setTags] = React.useState('')
 
-	const isEditing = Boolean(id);
+	const isEditingMode = Boolean(id)
 
-  const handleChangeFile = async (event) => {
-    try {
-      const formData = new FormData();
-      const file = event.target.files[0];
-      formData.append('image',file);
-      const {data} = await axios.post('/upload', formData);
-      console.log(data);
-      setImageUrl(data.url);
-    } catch (err) {
-      console.warn(err);
-      alert('Ошибка при загрузке файла!');
-    }
-  };
+	const handleChangeFile = async (e) => {
+		try {
+			const formData = new FormData()
+			const file = e.target.files[0]
+			formData.append('image', file)
+			const { data } = await axios.post('/upload', formData)
+			setImageUrl(data.url)
+		} catch (err) {
+			console.warn(err)
+			alert('Ошибка при загрузке файла')
+		}
+	}
 
-  const onClickRemoveImage = () => {
-    setImageUrl('');
-  };
+	const onClickRemoveImage = () => {
+		setImageUrl('')
+	}
 
-  const onChange = React.useCallback((value) => {
-    setText(value);
-  }, []);
+	const onChange = React.useCallback((value) => {
+		setText(value)
+	}, [])
 
-  const onSubmit = async () => {
-    try {
-      setLoading(true);
-      const fields = {
+	const onSubmitHandler = async (e) => {
+		e.preventDefault()
+		try {
+			setLoading(true)
+
+			const fields = {
 				title,
 				imageUrl,
 				tags,
 				text,
 			}
 
-      const { data } = isEditing ? await axios.patch(`/posts/${id}`, fields) : await axios.post('/posts', fields);
-
-			const _id = isEditing ? id : data._id;
-
-
-      navigate(`/post/${_id}`);
-
-    } catch (err) {
-      console.warn(err)
-			alert('Ошибка при создании статьи!')
-    }
-  };
-
-	React.useEffect(() => {
-		if (id) {
-			axios.get(`/posts/${id}`).then((res) => {
-				setTitle(res.title);
-				setTags(res.tags.join(','));
-				setText(res.text);
-				setImageUrl(res.imageUrl);
-			}); 
+			const { data } = isEditingMode
+				? await axios.patch(`/posts/${id}`, fields)
+				: await axios.post('/posts', fields)
+			const postId = isEditingMode ? id : data._id
+			navigate(`/posts/${postId}`)
+		} catch (err) {
+			console.warn(err)
+			alert('Ошибка при отправке поста')
 		}
-	}, []);
+	}
 
-  const options = React.useMemo(
-    () => ({
-      spellChecker: false,
-      maxHeight: '400px',
-      autofocus: true,
-      placeholder: 'Введите текст...',
-      status: false,
-      autosave: {
-        enabled: true,
-        delay: 1000,
-      },
-    }),
-    [],
-  );
+	useEffect(() => {
+		if (id) {
+			axios
+				.get(`/posts/${id}`)
+				.then(({ data }) => {
+					setTitle(data.title)
+					setImageUrl(data.imageUrl)
+					setTags(data.tags.join(', '))
+					setText(data.text)
+				})
+				.catch((err) => {
+					console.warn(err)
+					alert(`При загрузке статьи произошла ошибка.`)
+				})
+		}
+	}, [id])
 
-  if (!window.localStorage.getItem('token') && !isAuth) {
-    return <Navigate to="/" />;
-  }
+	const options = React.useMemo(
+		() => ({
+			spellChecker: false,
+			maxHeight: '400px',
+			autofocus: true,
+			placeholder: 'Введите текст...',
+			status: false,
+			autosave: {
+				enabled: true,
+				delay: 1000,
+			},
+		}),
+		[]
+	)
 
-  return (
+	if (!window.localStorage.getItem('token') && !isUserAuth) {
+		return <Navigate to={'/'} />
+	}
+
+	return (
 		<Paper style={{ padding: 30 }}>
 			<Button
-				onClick={() => inputFileRef.current.click()}
 				variant='outlined'
 				size='large'
+				onClick={() => inputFileRef.current.click()}
+				className={styles.upload}
 			>
 				Загрузить превью
 			</Button>
@@ -120,48 +128,49 @@ export const AddPost = () => {
 						variant='contained'
 						color='error'
 						onClick={onClickRemoveImage}
+						className={styles.delete}
 					>
 						Удалить
 					</Button>
-					<img
-						className={styles.image}
-						src={`http://localhost:4444${imageUrl}`}
-						alt='Uploaded'
-					/>
+					<img className={styles.image} src={imageUrl} alt='Uploaded' />
 				</>
 			)}
 			<br />
 			<br />
-			<TextField
-				classes={{ root: styles.title }}
-				variant='standard'
-				placeholder='Заголовок статьи...'
-				value={title}
-				onChange={(e) => setTitle(e.target.value)}
-				fullWidth
-			/>
-			<TextField
-				classes={{ root: styles.tags }}
-				variant='standard'
-				placeholder='Тэги'
-				value={tags}
-				onChange={(e) => setTags(e.target.value)}
-				fullWidth
-			/>
-			<SimpleMDE
-				className={styles.editor}
-				value={text}
-				onChange={onChange}
-				options={options}
-			/>
-			<div className={styles.buttons}>
-				<Button onClick={onSubmit} size='large' variant='contained'>
-					{isEditing ? 'Сохранить' : 'Опубликовать'}
-				</Button>
-				<a href='/'>
-					<Button size='large'>Отмена</Button>
-				</a>
-			</div>
+			<form onSubmit={onSubmitHandler}>
+				<TextField
+					classes={{ root: styles.title }}
+					variant='standard'
+					placeholder='Заголовок статьи...'
+					fullWidth
+					value={title}
+					onChange={(e) => setTitle(e.target.value)}
+				/>
+				<TextField
+					classes={{ root: styles.tags }}
+					variant='standard'
+					placeholder='Тэги'
+					fullWidth
+					value={tags}
+					onChange={(e) => setTags(e.target.value)}
+				/>
+				<SimpleMDE
+					className={styles.editor}
+					value={text}
+					onChange={onChange}
+					options={options}
+				/>
+				<div className={styles.buttons}>
+					<Button size='large' variant='contained' type='submit'>
+						{isEditingMode ? `Сохранить` : `Опубликовать`}
+					</Button>
+					<Link to='/' className={styles.reset}>
+						<Button size='large' variant='outlined'>
+							Отмена
+						</Button>
+					</Link>
+				</div>
+			</form>
 		</Paper>
 	)
-};
+}

@@ -1,21 +1,22 @@
-import React from "react";
+import React from 'react'
+import Typography from '@mui/material/Typography'
+import TextField from '@mui/material/TextField'
+import Paper from '@mui/material/Paper'
+import Button from '@mui/material/Button'
+import styles from './Login.module.scss'
+
 import { useDispatch, useSelector } from 'react-redux'
-import { Navigate } from "react-router-dom";
+import { useForm } from 'react-hook-form'
+import { Navigate } from 'react-router-dom'
 
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Paper from "@mui/material/Paper";
-import Button from "@mui/material/Button";
-import { useForm } from 'react-hook-form';
-
-import styles from "./Login.module.scss";
-
-import { fetchAuth, selectIsAuth } from "../../redux/slices/auth";
+import { fetchAuth } from '../../store/actions/auth'
+import { isAuth } from '../../store/slices/authSlice'
 
 export const Login = () => {
-  const isAuth = useSelector(selectIsAuth);
-  const dispatch = useDispatch();
-  const {
+	const dispatch = useDispatch()
+	const isUserAuth = useSelector(isAuth)
+
+	const {
 		register,
 		handleSubmit,
 		formState: { errors, isValid },
@@ -24,26 +25,26 @@ export const Login = () => {
 			email: '',
 			password: '',
 		},
-     mode: 'onChange',
-	});
+		mode: 'onChange',
+	})
 
-  const onSubmit = async (values) => {
-    const data = await dispatch(fetchAuth(values));
+	const onSubmit = async (values) => {
+		const data = await dispatch(fetchAuth(values))
 
-    if(!data.payload) {
-      return alert('Не удалось авторизоваться!')
-    }
+		if (`error` in data) {
+			return alert(data.payload)
+		}
 
-    if('token' in data.payload) {
-      window.localStorage.setItem('token', data.payload.token);
-    } 
-  };
+		if ('token' in data.payload) {
+			window.localStorage.setItem('token', data.payload.token)
+		}
+	}
 
-  if (isAuth) {
-    return <Navigate to="/"/>;
-  }
+	if (isUserAuth) {
+		return <Navigate to={'/'} />
+	}
 
-  return (
+	return (
 		<Paper classes={{ root: styles.root }}>
 			<Typography classes={{ root: styles.title }} variant='h5'>
 				Вход в аккаунт
@@ -52,19 +53,20 @@ export const Login = () => {
 				<TextField
 					className={styles.field}
 					label='E-Mail'
-					error={errors.email?.message}
+					error={Boolean(errors.email?.message)}
 					helperText={errors.email?.message}
-					type='email'
-					{...register('email', { required: 'укажите почту' })}
 					fullWidth
+					{...register('email', { required: 'Укажите почту' })}
+					type='email'
 				/>
 				<TextField
 					className={styles.field}
 					label='Пароль'
-					error={errors.password?.message}
+					type='password'
+					error={Boolean(errors.password?.message)}
 					helperText={errors.password?.message}
-					{...register('password', { required: 'укажите пароль' })}
 					fullWidth
+					{...register('password', { required: 'Укажите пароль' })}
 				/>
 				<Button
 					disabled={!isValid}
@@ -78,4 +80,4 @@ export const Login = () => {
 			</form>
 		</Paper>
 	)
-};
+}

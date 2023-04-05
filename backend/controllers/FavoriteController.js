@@ -1,70 +1,121 @@
 import FavoriteModel from '../models/Favorite.js'
-import PostModel from '../models/Post.js'
-import { getPost } from './PostController.js';
+import UserModel from '../models/User.js'
 
-export const getAll = async (req,res) => {
-    try {
-        const favorite = await FavoriteModel.find({ user: req.userId });
-        //console.log(favorite.at(0).post);
-        const posts = await PostModel.findById(favorite.at(0).post).exec();
-       
-        res.json(posts);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: 'не удалось получить избранные статьи',
-        });
-    }
-};
+export const getAll = (req, res) => {
+	try {
+		FavoriteModel.find(
+			{
+				user: req.userId,
+			},
+			(err, doc) => {
+				if (err) {
+					console.log(err)
+					return res.status(500).json({
+						message: 'Не удалось вернуть избранные статьи.',
+					})
+				}
 
-export const create = async (req,res) => {
-    try {
-        const doc = new FavoriteModel({
-            post: req.body.post,
-            user: req.userId,
-        });
-        
-        const favorite = await doc.save();
+				if (!doc) {
+					return res.status(404).json({
+						message: 'Избранные не найдены.',
+					})
+				}
+				res.json(doc)
+			}
+		)
+			.populate('user')
+			.sort('createdAt')
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось получить статьи.',
+		})
+	}
+}
 
-        res.json(favorite);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: 'не удалось добавить в избранное',
-        });
-    }
-};
+export const create = async (req, res) => {
+	try {
+		console.log(req.userId, req.params.favoriteId)
+		const doc = new FavoriteModel({
+			user: req.userId,
+			favorite: req.params.favoriteId,
+		})
+		console.log('good')
+		const favorite = await doc.save()
+		console.log('job')
+		UserModel.updateOne(
+			{ _id: req.userId },
+			{ $push: { favoriteCount: favorite._id } }
+		).exec()
 
-export const remove = async (req,res) => {
-    try {
-        const favoriteId = req.params.id;
-    
-        FavoriteModel.findOneAndDelete(
-          {
-            _id: favoriteId,
-          },(err, doc) => {
-            if (err) {
-              console.log(err);
-              return res.status(500).json({
-                message: 'Не удалось удалить статью из избранных',
-              });
-            }
-    
-            if (!doc) {
-              return res.status(404).json({
-                message: 'Статья не найдена',
-              });
-            }
-    
-            res.json({
-                success: true,
-            });
-          },
-        );
-      } catch (err) {
-        console.log(err);
-        res.status(500).json({
-          message: 'Не удалось получить комментарий',
-        });
-      }
-};
+		FavoriteModel.find(
+			{
+				user: req.userId,
+			},
+			(err, doc) => {
+				if (err) {
+					console.log(err)
+					return res.status(500).json({
+						message: 'Не удалось вернуть избранное.',
+					})
+				}
+
+				if (!doc) {
+					return res.status(404).json({
+						message: 'Избранное не найдена.',
+					})
+				}
+				res.json(doc)
+			}
+		).populate('user')
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось добавить в избранное.',
+		})
+	}
+}
+
+export const remove = async (req, res) => {
+	try {
+		const { favoriteId } = req.params
+
+		FavoriteModel.findByIdAndDelete(favoriteId, async (err, doc) => {
+			if (err) {
+				console.log(err)
+				return res.status(500).json({
+					message: 'Не удалось удалить статью из избранных.',
+				})
+			}
+			if (!doc) {
+				console.log(err)
+				return res.status(404).json({
+					message: 'Статья не найдена.',
+				})
+			}
+
+			await UserModel.findOneAndUpdate(
+				{ _id: req.userId },
+				{ $pullAll: { favoriteCount: [favoriteId] } },
+				{ new: true },
+				(err, _) => {
+					if (err) {
+						console.log(err)
+						return res.status(500).json({
+							message: 'Не удалось удалить статью из избранных.',
+						})
+					}
+				}
+			).clone()
+
+			res.json({
+				success: true,
+			})
+		})
+	} catch (err) {
+		console.log(err)
+		res.status(500).json({
+			message: 'Не удалось получить избранные.',
+		})
+	}
+}
