@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import multer from 'multer';
 import cors from 'cors';
 
@@ -15,16 +16,22 @@ import {checkAuth, handleValidationErrors} from './utils/index.js';
 
 import {UserController, PostController, CommentController, FavoriteController, SubscriptionController} from './controllers/index.js'
 
-mongoose.connect(
-    'mongodb+srv://admin:wwwwww@cluster0.0rb4kem.mongodb.net/?retryWrites=true&w=majority')
-    .then(() => console.log('DB ok'))
-    .catch((err) => console.log('DB error', err));
+//'mongodb+srv://admin:wwwwww@cluster0.0rb4kem.mongodb.net/?retryWrites=true&w=majority'
+//process.env.MONGODB_URI
+
+mongoose
+	.connect(process.env.MONGO_URI)
+	.then(() => console.log('DB ok'))
+	.catch((err) => console.log('DB error', err))
 
 const app = express();
 
-const storage = multer.diskStorage({
-    destination: (_, __, cb) => {
-        cb(null,'uploads');
+const storage = multer.diskStorage({    
+    destination: (_, __, cb) => {  
+			if (!fs.existsSync('uploads')){
+				fs.mkdirSync('uploads');
+			}
+      cb(null,'uploads');
     },
     filename: (_, file, cb) => {
         cb(null, file.originalname);
@@ -96,7 +103,7 @@ app.delete(
 	SubscriptionController.remove
 )
 
-app.listen(4444, (err)=> {
+app.listen(process.env.PORT || 4444, (err)=> {
     if(err) {
         return console.log(err);
     }

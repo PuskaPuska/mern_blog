@@ -99,7 +99,7 @@ export const fetchCreateComment = createAsyncThunk(
 			return data
 		} catch (err) {
 			return thunkAPI.rejectWithValue(
-				'При отправке комментария на серевер произошла ошибка.'
+				'При отправке комментария на сервер произошла ошибка.'
 			)
 		}
 	}
@@ -114,6 +114,34 @@ export const fetchCommentsById = createAsyncThunk(
 		} catch (err) {
 			return thunkAPI.rejectWithValue(
 				'При загрузке комментариев произошла ошибка.'
+			)
+		}
+	}
+) // TODO Сохранить текст ошибок в redux, как-то отобразить их пользователю.
+
+export const fetchAddSubscription = createAsyncThunk(
+	'posts/fetchAddSubscription',
+	async (id, thunkAPI) => {
+		try {
+			const { data } = await axios.post(`/subscriptions/${id}`)
+			return data
+		} catch (err) {
+			return thunkAPI.rejectWithValue(
+				'При загрузке подписок произошла ошибка.'
+			)
+		}
+	}
+) // TODO Сохранить текст ошибок в redux, как-то отобразить их пользователю.
+
+export const fetchAddFavorite = createAsyncThunk(
+	'posts/fetchAddFavorite',
+	async (id, thunkAPI) => {
+		try {
+			const { data } = await axios.post(`/favorites/${id}`)
+			return data
+		} catch (err) {
+			return thunkAPI.rejectWithValue(
+				'При загрузке постов по тегу произошла ошибка.'
 			)
 		}
 	}

@@ -8,6 +8,7 @@ import Grid from '@mui/material/Grid'
 import ReactMarkdown from 'react-markdown'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchCommentsById, fetchPostById } from '../../store/actions/posts'
+import { baseURL } from '../../axios/axios.js'
 
 export const FullPost = () => {
 	const dispatch = useDispatch()

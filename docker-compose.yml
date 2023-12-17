@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - '4444:4444'
+    environment:
+      - MONGO_URI=mongodb://myUser:myPassword@mongo:27017/mern_db
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:4444
+    ports:
+      - '3000:3000' # Проброс порта с хоста на контейнер
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=Admin
+      - MONGO_INITDB_ROOT_PASSWORD=Admin
+      - MONGO_INITDB_DATABASE=mern_db
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+

@@ -8,7 +8,8 @@ import {
 	Registration,
 	AddPost,
 	Login,
-	PostsWithTag
+	PostsWithTag,
+	//Subscription
 } from '../../pages'
 import { useDispatch } from 'react-redux'
 import { useEffect } from 'react'
@@ -27,6 +28,7 @@ function App() {
 			<Container maxWidth='lg'>
 				<Routes>
 					<Route path='/' element={<Home />} />
+					{/*<Route path='/subscription' element={<Subscription />} />*/}
 					<Route path='/posts/:id' element={<FullPost />} />
 					<Route path='/posts/:id/edit' element={<AddPost />} />
 					<Route path='/add-post' element={<AddPost />} />

@@ -6,12 +6,17 @@ import DeleteIcon from '@mui/icons-material/Clear';
 import EditIcon from '@mui/icons-material/Edit';
 import EyeIcon from '@mui/icons-material/RemoveRedEyeOutlined';
 import CommentIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import Checkbox from '@mui/material/Checkbox'
+import FavoriteBorder from '@mui/icons-material/FavoriteBorder'
+import Favorite from '@mui/icons-material/Favorite'
+
 
 import styles from './Post.module.scss';
 import { UserInfo } from '../UserInfo';
 import { PostSkeleton } from './Skeleton';
 import { useDispatch } from 'react-redux';
-import { fetchRemovePost } from '../../store/actions/posts';
+import { fetchRemovePost, fetchAddFavorite } from '../../store/actions/posts';
+import { baseURL } from '../../axios/axios.js'
 
 export const Post = ({
   id,
@@ -26,6 +31,7 @@ export const Post = ({
   isFullPost,
   isLoading,
   isEditable,
+	isFavorite,
 }) => {
   const dispatch = useDispatch();
   if (isLoading) {
@@ -36,11 +42,19 @@ export const Post = ({
     if (window.confirm('Вы действительно хотите удалить статью?')) {
       dispatch(fetchRemovePost(id));
     }
-    
   };
 
   return (
 		<div className={clsx(styles.root, { [styles.rootFull]: isFullPost })}>
+			{!isEditable && (
+				<div className={styles.editButtons}>
+					<Checkbox
+						onClick={() => dispatch(fetchAddFavorite(id))}
+						icon={<FavoriteBorder />}
+						checkedIcon={<Favorite />}
+					/>
+				</div>
+			)}
 			{isEditable && (
 				<div className={styles.editButtons}>
 					<Link to={`/posts/${id}/edit`}>
@@ -48,6 +62,7 @@ export const Post = ({
 							<EditIcon />
 						</IconButton>
 					</Link>
+
 					<IconButton onClick={onClickRemove} color='secondary'>
 						<DeleteIcon />
 					</IconButton>
@@ -56,12 +71,16 @@ export const Post = ({
 			{imageUrl && (
 				<img
 					className={clsx(styles.image, { [styles.imageFull]: isFullPost })}
-					src={imageUrl}
+					src={`${baseURL}${imageUrl}`}
 					alt={title}
 				/>
 			)}
 			<div className={styles.wrapper}>
-				<UserInfo {...user} additionalText={createdAt} />
+				<UserInfo
+					{...user}
+					additionalText={createdAt}
+					isEditable={isEditable}
+				/>
 				<div className={styles.indention}>
 					<h2
 						className={clsx(styles.title, { [styles.titleFull]: isFullPost })}
